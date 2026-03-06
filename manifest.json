@@ -1,0 +1,10 @@
+{
+  "name": "Rakelfingers",
+  "short_name": "Rakelfingers",
+  "description": "Colorful keyboard toy for preschoolers",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#111111",
+  "theme_color": "#111111",
+  "start_url": "."
+}
