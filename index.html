@@ -599,12 +599,54 @@
     }
   }, { passive: false });
 
-  // ─── MOUSE CLICK (desktop fallback) ──────────────────────────────────────────
+  // ─── MOUSE INTERACTIONS ──────────────────────────────────────────────────────
 
+  // Click: big explosion + symbol at cursor
   document.addEventListener('click', function(e) {
     if (!splashDismissed) return;
     if (e.target === splash || splash.contains(e.target)) return;
-    interact(randomChar(), e.clientX, e.clientY, false);
+    interact(randomSymbol(), e.clientX, e.clientY, true);
+  });
+
+  // Move: trail of tiny particles following the cursor (throttled)
+  let lastTrailTime = 0;
+  let lastTrailX = -999, lastTrailY = -999;
+
+  document.addEventListener('mousemove', function(e) {
+    if (!splashDismissed) return;
+
+    const now = Date.now();
+    if (now - lastTrailTime < 30) return; // max ~33fps trail
+
+    // Only emit if mouse has moved enough (avoids spray while stationary)
+    const dx = e.clientX - lastTrailX;
+    const dy = e.clientY - lastTrailY;
+    if (dx * dx + dy * dy < 100) return; // less than 10px movement
+
+    lastTrailTime = now;
+    lastTrailX = e.clientX;
+    lastTrailY = e.clientY;
+
+    // Bail if particle system is already busy
+    if (particles.length > 180) return;
+
+    // Sprinkle 3–5 small particles at cursor
+    const baseHue = Math.random() * 360;
+    const count = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.5 + Math.random() * 2.5;
+      particles.push({
+        x: e.clientX + (Math.random() - 0.5) * 10,
+        y: e.clientY + (Math.random() - 0.5) * 10,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 0.5,
+        alpha: 0.7 + Math.random() * 0.3,
+        hue: (baseHue + i * 30) % 360,
+        size: 2 + Math.random() * 3,
+        square: Math.random() > 0.5
+      });
+    }
   });
 
   // ─── RESIZE & VISIBILITY ─────────────────────────────────────────────────────
