@@ -525,6 +525,25 @@
   function randomChar()   { return ALL_CHARS[Math.floor(Math.random() * ALL_CHARS.length)]; }
   function randomSymbol() { return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]; }
 
+  // ─── HAPTICS ──────────────────────────────────────────────────────────────────
+
+  let hapticEl = null;
+
+  function initHaptics() {
+    const el = document.createElement('input');
+    el.type = 'checkbox';
+    el.setAttribute('switch', '');
+    el.id = 'haptic-toggle';
+    el.style.cssText = 'position:fixed;left:-9999px;top:-9999px;pointer-events:none;opacity:0;';
+    document.body.appendChild(el);
+    hapticEl = el;
+  }
+
+  function haptic() {
+    if (hapticEl) hapticEl.click();
+    try { navigator.vibrate && navigator.vibrate(25); } catch(e) {}
+  }
+
   // ─── SPLASH DISMISS ──────────────────────────────────────────────────────────
 
   const splash = document.getElementById('splash');
@@ -593,6 +612,7 @@
   document.addEventListener('touchstart', function(e) {
     e.preventDefault();
     if (!splashDismissed) return;
+    haptic();
     for (let i = 0; i < e.changedTouches.length; i++) {
       const t = e.changedTouches[i];
       interact(randomSymbol(), t.clientX, t.clientY, true);
@@ -703,6 +723,7 @@
 
   // ─── STARTUP ─────────────────────────────────────────────────────────────────
 
+  initHaptics();
   initShapes();
   loop();
 
