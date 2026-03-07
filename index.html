@@ -266,6 +266,9 @@
 
   // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
+  const PENTA = [261.63, 293.66, 329.63, 392.00, 440.00,
+                 523.25, 587.33, 659.25, 783.99, 880.00];
+
   const SYMBOLS    = ['★','♥','●','▲','■','♦','✦','✿','☀','❄'];
   const SHAPE_CHARS = ['●', '■', '▲', '★', '♥'];
   const ALL_CHARS   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -337,27 +340,6 @@
 
   // ─── AUDIO ENGINE ────────────────────────────────────────────────────────────
 
-  // Pentatonic scale for random key mashing (letters, symbols, touch)
-  const PENTA = [261.63, 293.66, 329.63, 392.00, 440.00,
-                 523.25, 587.33, 659.25, 783.99, 880.00];
-
-  // C major white notes (C4–C5) for keys 1–9,0
-  // 1=C4  2=D4  3=E4  4=F4  5=G4  6=A4  7=B4  8=C5  9=D5  0=E5
-  const NOTE_NATURAL = {
-    '1': 261.63, '2': 293.66, '3': 329.63, '4': 349.23,
-    '5': 392.00, '6': 440.00, '7': 493.88, '8': 523.25,
-    '9': 587.33, '0': 659.25
-  };
-  // Shift raises to the sharp (next semitone up): C#, D#, F#, G#, A# — E/B have no sharp so stay same
-  const NOTE_SHARP = {
-    '1': 277.18, '2': 311.13, '3': 349.23, '4': 369.99,
-    '5': 415.30, '6': 466.16, '7': 493.88, '8': 554.37,
-    '9': 622.25, '0': 698.46
-  };
-  // Note name labels for display
-  const NOTE_NAME_NATURAL = { '1':'C','2':'D','3':'E','4':'F','5':'G','6':'A','7':'B','8':'C','9':'D','0':'E' };
-  const NOTE_NAME_SHARP   = { '1':'C#','2':'D#','3':'E♭','4':'F#','5':'G#','6':'A#','7':'B','8':'C#','9':'D#','0':'E♭' };
-
   function unlockAudio() {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -365,16 +347,14 @@
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
 
-  function playTone(char, freq) {
+  function playTone(char) {
     if (!audioCtx) return;
     try {
       const isDigit = char >= '0' && char <= '9';
-      if (freq === undefined) {
-        const idx = isDigit
-          ? parseInt(char, 10)
-          : Math.abs(char.charCodeAt(0) - 65) % 10;
-        freq = PENTA[idx] * (isDigit ? 2 : 1);
-      }
+      const idx     = isDigit
+        ? parseInt(char, 10)
+        : Math.abs(char.charCodeAt(0) - 65) % 10;
+      const freq = PENTA[idx] * (isDigit ? 2 : 1);
 
       const osc  = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -535,48 +515,15 @@
 
   // ─── CORE INTERACTION ────────────────────────────────────────────────────────
 
-  function interact(char, x, y, bigBurst, freq) {
+  function interact(char, x, y, bigBurst) {
     unlockAudio();
     spawnLetter(char, x, y);
-    playTone(char, freq);
+    playTone(char);
     spawnParticles(x, y, bigBurst ? 55 : 30);
   }
 
   function randomChar()   { return ALL_CHARS[Math.floor(Math.random() * ALL_CHARS.length)]; }
   function randomSymbol() { return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]; }
-
-  // ─── HAPTICS ──────────────────────────────────────────────────────────────────
-  // iOS Taptic Engine requires a *real* user touch on the label element itself —
-  // programmatic .click() from a touchstart handler no longer works (WebKit blocked
-  // it in Jan 2025, bug 285120). The only working approach: make the <label> the
-  // actual touch target. We overlay a full-screen transparent <label> (z-index 4,
-  // shown only after splash) containing a hidden <input switch>. The user's finger
-  // physically hits the label → WebKit fires haptics natively. Our touchstart
-  // listener is attached to this label (not document) to handle the visuals.
-  // Android uses navigator.vibrate(25) from touchstart.
-
-  var _hapticLabel = null;
-
-  (function initHaptics() {
-    try {
-      if (navigator.vibrate) return; // Android path — no overlay needed
-
-      var cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.setAttribute('switch', '');
-      cb.setAttribute('aria-hidden', 'true');
-      cb.style.cssText = 'position:fixed;left:-999px;top:-999px;opacity:0;pointer-events:none;appearance:auto;';
-
-      var lbl = document.createElement('label');
-      lbl.setAttribute('aria-hidden', 'true');
-      // Full-screen, transparent, above canvas (z:1) and shapes (z:0) but below letters (z:2)
-      // and splash (z:10). Shown only after splash is dismissed.
-      lbl.style.cssText = 'position:fixed;inset:0;z-index:1;opacity:0;display:none;cursor:pointer;touch-action:none;';
-      lbl.appendChild(cb);
-      document.body.appendChild(lbl);
-      _hapticLabel = lbl;
-    } catch(e) {}
-  })();
 
   // ─── SPLASH DISMISS ──────────────────────────────────────────────────────────
 
@@ -590,7 +537,6 @@
     // Request fullscreen on dismiss (must be inside user gesture)
     requestFullscreen();
 
-    if (_hapticLabel) _hapticLabel.style.display = 'block';
     splash.style.opacity       = '0';
     splash.style.pointerEvents = 'none';
     setTimeout(function() {
@@ -636,15 +582,6 @@
 
     const x     = W / 2 + (Math.random() - 0.5) * W * 0.55;
     const y     = H / 2 + (Math.random() - 0.5) * H * 0.55;
-
-    const digit = e.code.startsWith('Digit') ? e.code.slice(5) : null;
-    if (digit && NOTE_NATURAL[digit]) {
-      const freq  = e.shiftKey ? NOTE_SHARP[digit]   : NOTE_NATURAL[digit];
-      const label = e.shiftKey ? NOTE_NAME_SHARP[digit] : NOTE_NAME_NATURAL[digit];
-      interact(label, x, y, false, freq);
-      return;
-    }
-
     const isBig = e.key === ' ' || e.key === 'Enter' || e.key === 'Backspace' || e.key === 'Delete';
     const char  = (isBig || e.key.length !== 1) ? randomSymbol() : e.key.toUpperCase();
 
@@ -653,87 +590,19 @@
 
   // ─── TOUCH EVENTS ────────────────────────────────────────────────────────────
 
-  let lastTouchTime = 0;
-
-  function handleTouches(e) {
-    e.preventDefault();
-    if (!splashDismissed) return;
-    lastTouchTime = Date.now();
-    if (navigator.vibrate) { try { navigator.vibrate(25); } catch(_) {} }
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      const t = e.changedTouches[i];
-      interact(randomSymbol(), t.clientX, t.clientY, true);
-    }
-  }
-
-  // iOS: touchstart on the haptic label overlay (label is the physical touch target → haptics fire)
-  // Android/desktop: touchstart on document
-  if (_hapticLabel) {
-    _hapticLabel.addEventListener('touchstart', handleTouches, { passive: false });
-  }
   document.addEventListener('touchstart', function(e) {
-    // On iOS the haptic label intercepts touches, so this only fires for Android/desktop
-    // or when _hapticLabel isn't present. Avoid double-handling.
-    if (_hapticLabel && e.target === _hapticLabel) return;
-    if (_hapticLabel && _hapticLabel.contains(e.target)) return;
     e.preventDefault();
     if (!splashDismissed) return;
-    lastTouchTime = Date.now();
-    if (navigator.vibrate) { try { navigator.vibrate(25); } catch(_) {} }
     for (let i = 0; i < e.changedTouches.length; i++) {
       const t = e.changedTouches[i];
-      interact(randomSymbol(), t.clientX, t.clientY, true);
-    }
-  }, { passive: false });
-
-  // Touch drag: trail of tiny particles following finger movement (throttled)
-  let lastTouchTrailTime = 0;
-  let lastTouchTrailX = -999, lastTouchTrailY = -999;
-
-  document.addEventListener('touchmove', function(e) {
-    e.preventDefault();
-    if (!splashDismissed) return;
-
-    const now = Date.now();
-    if (now - lastTouchTrailTime < 30) return;
-
-    const t = e.changedTouches[0];
-    if (!t) return;
-
-    const dx = t.clientX - lastTouchTrailX;
-    const dy = t.clientY - lastTouchTrailY;
-    if (dx * dx + dy * dy < 100) return;
-
-    lastTouchTrailTime = now;
-    lastTouchTrailX = t.clientX;
-    lastTouchTrailY = t.clientY;
-
-    if (particles.length > 180) return;
-
-    const baseHue = Math.random() * 360;
-    const count = 3 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 0.5 + Math.random() * 2.5;
-      particles.push({
-        x: t.clientX + (Math.random() - 0.5) * 10,
-        y: t.clientY + (Math.random() - 0.5) * 10,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 0.5,
-        alpha: 0.7 + Math.random() * 0.3,
-        hue: (baseHue + i * 30) % 360,
-        size: 2 + Math.random() * 3,
-        square: Math.random() > 0.5
-      });
+      interact(randomChar(), t.clientX, t.clientY, false);
     }
   }, { passive: false });
 
   // ─── MOUSE INTERACTIONS ──────────────────────────────────────────────────────
 
-  // Click: big explosion + symbol at cursor (desktop mouse only — ignore post-touch synthetic clicks)
+  // Click: big explosion + symbol at cursor
   document.addEventListener('click', function(e) {
-    if (!e.isTrusted) return;
-    if (Date.now() - lastTouchTime < 500) return;  // suppress iOS post-touch click
     if (!splashDismissed) return;
     if (e.target === splash || splash.contains(e.target)) return;
     interact(randomSymbol(), e.clientX, e.clientY, true);
