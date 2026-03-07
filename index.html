@@ -527,25 +527,20 @@
 
   // ─── HAPTICS ──────────────────────────────────────────────────────────────────
 
-  let hapticEl = null;
-
-  function initHaptics() {
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.setAttribute('switch', '');
-    cb.id = 'haptic-toggle';
-    cb.style.cssText = 'all:initial;appearance:auto;';
-    const lbl = document.createElement('label');
-    lbl.setAttribute('for', 'haptic-toggle');
-    lbl.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
-    lbl.appendChild(cb);
-    document.body.appendChild(lbl);
-    hapticEl = lbl;
-  }
-
   function haptic() {
-    if (hapticEl) hapticEl.click();
-    try { navigator.vibrate && navigator.vibrate(25); } catch(e) {}
+    try {
+      if (navigator.vibrate) { navigator.vibrate(25); return; }
+      var lbl = document.createElement('label');
+      lbl.ariaHidden = 'true';
+      lbl.style.display = 'none';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.setAttribute('switch', '');
+      lbl.appendChild(cb);
+      document.head.appendChild(lbl);
+      lbl.click();
+      document.head.removeChild(lbl);
+    } catch(e) {}
   }
 
   // ─── SPLASH DISMISS ──────────────────────────────────────────────────────────
@@ -621,6 +616,7 @@
       const t = e.changedTouches[i];
       interact(randomSymbol(), t.clientX, t.clientY, true);
     }
+    document.addEventListener('click', function(e) { e.stopImmediatePropagation(); }, { capture: true, once: true, passive: false });
   }, { passive: false });
 
   // Touch drag: trail of tiny particles following finger movement (throttled)
@@ -728,7 +724,6 @@
 
   // ─── STARTUP ─────────────────────────────────────────────────────────────────
 
-  initHaptics();
   initShapes();
   loop();
 
