@@ -526,22 +526,37 @@
   function randomSymbol() { return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]; }
 
   // ─── HAPTICS ──────────────────────────────────────────────────────────────────
+  // iOS: persistent hidden checkbox+label pair (display:none in body, connected via for/id).
+  // Clicking the label toggles the checkbox, which fires the Taptic Engine on iOS 18+.
+  // Elements are persistent (not re-created each call) so iOS can track their state.
+  // Android: navigator.vibrate() fallback.
+
+  var _hapticCb  = null;
+  var _hapticLbl = null;
+
+  (function initHaptics() {
+    try {
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.id   = 'hx';
+      cb.setAttribute('switch', '');
+      cb.style.display = 'none';
+      document.body.appendChild(cb);
+      _hapticCb = cb;
+
+      var lbl = document.createElement('label');
+      lbl.htmlFor      = 'hx';
+      lbl.ariaHidden   = 'true';
+      lbl.style.display = 'none';
+      document.body.appendChild(lbl);
+      _hapticLbl = lbl;
+    } catch(e) {}
+  })();
 
   function haptic() {
     try {
       if (navigator.vibrate) { navigator.vibrate(25); return; }
-      var lbl = document.createElement('label');
-      lbl.ariaHidden = 'true';
-      lbl.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;';
-      var cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.setAttribute('switch', '');
-      cb.style.cssText = 'all:initial;appearance:auto;';
-      lbl.appendChild(cb);
-      lbl.addEventListener('click', function(ev) { ev.stopPropagation(); }, { capture: true, once: true });
-      document.body.appendChild(lbl);
-      lbl.click();
-      document.body.removeChild(lbl);
+      if (_hapticLbl) _hapticLbl.click();
     } catch(e) {}
   }
 
