@@ -669,6 +669,7 @@
 
   // Click: big explosion + symbol at cursor
   document.addEventListener('click', function(e) {
+    if (!e.isTrusted) return;
     if (!splashDismissed) return;
     if (e.target === splash || splash.contains(e.target)) return;
     interact(randomSymbol(), e.clientX, e.clientY, true);
