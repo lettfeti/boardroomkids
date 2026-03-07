@@ -530,13 +530,17 @@
   let hapticEl = null;
 
   function initHaptics() {
-    const el = document.createElement('input');
-    el.type = 'checkbox';
-    el.setAttribute('switch', '');
-    el.id = 'haptic-toggle';
-    el.style.cssText = 'position:fixed;left:-9999px;top:-9999px;pointer-events:none;opacity:0;';
-    document.body.appendChild(el);
-    hapticEl = el;
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.setAttribute('switch', '');
+    cb.id = 'haptic-toggle';
+    cb.style.cssText = 'all:initial;appearance:auto;';
+    const lbl = document.createElement('label');
+    lbl.setAttribute('for', 'haptic-toggle');
+    lbl.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
+    lbl.appendChild(cb);
+    document.body.appendChild(lbl);
+    hapticEl = lbl;
   }
 
   function haptic() {
