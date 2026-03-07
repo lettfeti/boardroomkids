@@ -532,14 +532,16 @@
       if (navigator.vibrate) { navigator.vibrate(25); return; }
       var lbl = document.createElement('label');
       lbl.ariaHidden = 'true';
-      lbl.style.display = 'none';
+      lbl.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;';
       var cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.setAttribute('switch', '');
+      cb.style.cssText = 'all:initial;appearance:auto;';
       lbl.appendChild(cb);
-      document.head.appendChild(lbl);
+      lbl.addEventListener('click', function(ev) { ev.stopPropagation(); }, { capture: true, once: true });
+      document.body.appendChild(lbl);
       lbl.click();
-      document.head.removeChild(lbl);
+      document.body.removeChild(lbl);
     } catch(e) {}
   }
 
@@ -608,15 +610,17 @@
 
   // ─── TOUCH EVENTS ────────────────────────────────────────────────────────────
 
+  let lastTouchTime = 0;
+
   document.addEventListener('touchstart', function(e) {
     e.preventDefault();
     if (!splashDismissed) return;
+    lastTouchTime = Date.now();
     haptic();
     for (let i = 0; i < e.changedTouches.length; i++) {
       const t = e.changedTouches[i];
       interact(randomSymbol(), t.clientX, t.clientY, true);
     }
-    document.addEventListener('click', function(e) { e.stopImmediatePropagation(); }, { capture: true, once: true, passive: false });
   }, { passive: false });
 
   // Touch drag: trail of tiny particles following finger movement (throttled)
@@ -663,9 +667,10 @@
 
   // ─── MOUSE INTERACTIONS ──────────────────────────────────────────────────────
 
-  // Click: big explosion + symbol at cursor
+  // Click: big explosion + symbol at cursor (desktop mouse only — ignore post-touch synthetic clicks)
   document.addEventListener('click', function(e) {
     if (!e.isTrusted) return;
+    if (Date.now() - lastTouchTime < 500) return;  // suppress iOS post-touch click
     if (!splashDismissed) return;
     if (e.target === splash || splash.contains(e.target)) return;
     interact(randomSymbol(), e.clientX, e.clientY, true);
