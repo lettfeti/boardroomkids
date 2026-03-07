@@ -595,7 +595,49 @@
     if (!splashDismissed) return;
     for (let i = 0; i < e.changedTouches.length; i++) {
       const t = e.changedTouches[i];
-      interact(randomChar(), t.clientX, t.clientY, false);
+      interact(randomSymbol(), t.clientX, t.clientY, true);
+    }
+  }, { passive: false });
+
+  // Touch drag: trail of tiny particles following finger movement (throttled)
+  let lastTouchTrailTime = 0;
+  let lastTouchTrailX = -999, lastTouchTrailY = -999;
+
+  document.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    if (!splashDismissed) return;
+
+    const now = Date.now();
+    if (now - lastTouchTrailTime < 30) return;
+
+    const t = e.changedTouches[0];
+    if (!t) return;
+
+    const dx = t.clientX - lastTouchTrailX;
+    const dy = t.clientY - lastTouchTrailY;
+    if (dx * dx + dy * dy < 100) return;
+
+    lastTouchTrailTime = now;
+    lastTouchTrailX = t.clientX;
+    lastTouchTrailY = t.clientY;
+
+    if (particles.length > 180) return;
+
+    const baseHue = Math.random() * 360;
+    const count = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.5 + Math.random() * 2.5;
+      particles.push({
+        x: t.clientX + (Math.random() - 0.5) * 10,
+        y: t.clientY + (Math.random() - 0.5) * 10,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 0.5,
+        alpha: 0.7 + Math.random() * 0.3,
+        hue: (baseHue + i * 30) % 360,
+        size: 2 + Math.random() * 3,
+        square: Math.random() > 0.5
+      });
     }
   }, { passive: false });
 
